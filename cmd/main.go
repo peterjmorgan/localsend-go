@@ -288,13 +288,35 @@ func main() {
 	}
 
 	if mode == "📤 Send" {
-		filePath := mTyped.textInput.Value()
-		if filePath == "" {
-			fmt.Println("Send mode requires a file path")
-			os.Exit(1)
+		var filePath string
+		logger.InitLogger()
+		// Check for command line arguments
+		if len(os.Args) > 1 {
+			filePathArg := os.Args[1]
+			if err = checkFile(filePathArg); err != nil {
+				fmt.Printf("Error: %v\n", err)
+				fmt.Println("Falling back to interactive mode...")
+			} else {
+				// File is valid, proceed with send operation
+				//logger.InitLogger()
+				//err := handlers.SendFile(filePath)
+				//if err != nil {
+				//	logger.Errorf("Send failed: %v", err)
+				//	os.Exit(1)
+				//}
+				//os.Exit(0)
+				filePath = filePathArg
+				logger.Infof("Using file: %s\n", filePathArg)
+				_ = mTyped.textInput.Value()
+			}
+		} else {
+			filePath = mTyped.textInput.Value()
+			if filePath == "" {
+				fmt.Println("Send mode requires a file path")
+				os.Exit(1)
+			}
 		}
 
-		logger.InitLogger()
 		err := handlers.SendFile(filePath)
 		if err != nil {
 			logger.Errorf("Send failed: %v", err)
@@ -317,4 +339,19 @@ func main() {
 		select {}
 
 	}
+}
+
+func checkFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file does not exist: %s", path)
+		}
+		if os.IsPermission(err) {
+			return fmt.Errorf("permission denied: %s", path)
+		}
+		return fmt.Errorf("cannot open file: %s: %v", path, err)
+	}
+	defer file.Close()
+	return nil
 }
